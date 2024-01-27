@@ -5,6 +5,7 @@ from time import time
 
 import discord
 from discord.ext import tasks
+import validators
 
 from config import *
 from discord_logger import DiscordLogger
@@ -67,9 +68,11 @@ async def process_latest_offers():
                 color=offer.scraper.color
             )
 
+            image_url = offer.image_url if validators.url(offer.image_url) else None
+
             embed.add_field(name="Cena", value=str(offer.price) + " Kč")
             embed.set_author(name=offer.scraper.name, icon_url=offer.scraper.logo_url)
-            embed.set_image(url=offer.image_url)
+            embed.set_image(url=image_url)
 
             await channel.send(embed=embed)
     else:
