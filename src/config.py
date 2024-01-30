@@ -26,11 +26,16 @@ _str_to_disposition_map = {
     "4+kk": Disposition.FLAT_4KK,
     "4+1": Disposition.FLAT_4,
     "5++": Disposition.FLAT_5_UP,
-    "others": Disposition.FLAT_OTHERS
+    "others": Disposition.FLAT_OTHERS,
 }
 
+
 def dispositions_converter(raw_disps: str):
-    return functools.reduce(operator.or_, map(lambda d: _str_to_disposition_map[d], raw_disps.split(",")), Disposition.NONE)
+    return functools.reduce(
+        operator.or_,
+        map(lambda d: _str_to_disposition_map[d], raw_disps.split(",")),
+        Disposition.NONE,
+    )
 
 
 @environ.config(prefix="")
@@ -40,6 +45,7 @@ class Config:
     refresh_interval_daytime_minutes: int = environ.var(converter=int)
     refresh_interval_nighttime_minutes: int = environ.var(converter=int)
     dispositions: Disposition = environ.var(converter=dispositions_converter)
+    max_price: int = environ.var(converter=int)
 
     @environ.config()
     class Discord:
@@ -48,5 +54,6 @@ class Config:
         dev_channel = environ.var(converter=int)
 
     discord: Discord = environ.group(Discord)
+
 
 config: Config = Config.from_environ()

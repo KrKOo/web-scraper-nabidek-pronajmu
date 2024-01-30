@@ -14,14 +14,20 @@ from scrapers.rental_offer import RentalOffer
 from scrapers_manager import create_scrapers, fetch_latest_offers
 
 
-def get_current_daytime() -> bool: return datetime.now().hour in range(6, 22)
+def get_current_daytime() -> bool:
+    return datetime.now().hour in range(6, 22)
 
 
 client = discord.Client(intents=discord.Intents.default())
 daytime = get_current_daytime()
-interval_time = config.refresh_interval_daytime_minutes if daytime else config.refresh_interval_nighttime_minutes
+interval_time = (
+    config.refresh_interval_daytime_minutes
+    if daytime
+    else config.refresh_interval_nighttime_minutes
+)
 
 scrapers = create_scrapers(config.dispositions)
+
 
 @client.event
 async def on_ready():
@@ -49,23 +55,30 @@ async def process_latest_offers():
     logging.info("Fetching offers")
 
     new_offers: list[RentalOffer] = []
+    new_offers_in_price_range: list[RentalOffer] = []
     for offer in fetch_latest_offers(scrapers):
         if not storage.contains(offer):
             new_offers.append(offer)
+            if str(offer.price).isnumeric() and int(offer.price) <= config.max_price:
+                new_offers_in_price_range.append(offer)
 
     first_time = storage.first_time
     storage.save_offers(new_offers)
 
-    logging.info("Offers fetched (new: {})".format(len(new_offers)))
+    logging.info(
+        "Offers fetched (new: {}, new in price range: {}, max price: {})".format(
+            len(new_offers), len(new_offers_in_price_range), config.max_price
+        )
+    )
 
     if not first_time:
-        for offer in new_offers:
+        for offer in new_offers_in_price_range:
             embed = discord.Embed(
                 title=offer.title,
                 url=offer.link,
                 description=offer.location,
                 timestamp=datetime.utcnow(),
-                color=offer.scraper.color
+                color=offer.scraper.color,
             )
 
             image_url = offer.image_url if validators.url(offer.image_url) else None
@@ -80,10 +93,13 @@ async def process_latest_offers():
 
     global daytime, interval_time
     if daytime != get_current_daytime():  # Pokud stary daytime neodpovida novemu
-
         daytime = not daytime  # Zneguj daytime (podle podminky se zmenil)
 
-        interval_time = config.refresh_interval_daytime_minutes if daytime else config.refresh_interval_nighttime_minutes
+        interval_time = (
+            config.refresh_interval_daytime_minutes
+            if daytime
+            else config.refresh_interval_nighttime_minutes
+        )
 
         logging.info("Fetching latest offers every {} minutes".format(interval_time))
         process_latest_offers.change_interval(minutes=interval_time)
@@ -94,8 +110,9 @@ async def process_latest_offers():
 if __name__ == "__main__":
     logging.basicConfig(
         level=(logging.DEBUG if config.debug else logging.INFO),
-        format='%(asctime)s - [%(levelname)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
+        format="%(asctime)s - [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     logging.debug("Running in debug mode")
 
