@@ -13,7 +13,6 @@ import requests
 
 
 class ScraperBezrealitky(ScraperBase):
-
     name = "BezRealitky"
     logo_url = "https://www.bezrealitky.cz/manifest-icon-192.maskable.png"
     color = 0x00CC00
@@ -67,7 +66,7 @@ class ScraperBezrealitky(ScraperBase):
     def build_response(self) -> requests.Response:
         return requests.post(
             url=f"{ScraperBezrealitky.API}{ScraperBezrealitky.Routes.GRAPHQL}",
-            json=self._config
+            json=self._config,
         )
 
     def get_latest_offers(self) -> list[RentalOffer]:
@@ -80,7 +79,8 @@ class ScraperBezrealitky(ScraperBase):
                 title=item["imageAltText"],
                 location=item["address"],
                 price=f"{item['price']} / {item['charges']}",
-                image_url=item["mainImage"]["url"],
+                image_url=(item["mainImage"] and item["mainImage"]["url"])
+                or "http://tinyurl.com/dwy6864d",
             )
             for item in response["data"]["listAdverts"]["list"]
         ]
